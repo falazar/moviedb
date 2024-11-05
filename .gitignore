@@ -1,0 +1,6 @@
+# IntelliJ IDEA directories
+.idea/
+*.iml
+
+# Node modules directory
+node_modules/

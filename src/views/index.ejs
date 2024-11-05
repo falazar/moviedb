@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Posters</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+
+<script>
+  async function markSeen(imdbID) {
+    const response = await fetch(`/markSeen?imdbID=${imdbID}`, {
+      method: 'POST'
+    });
+    if (response.ok) {
+      document.getElementById(imdbID).style.display = 'none';
+    } else {
+      alert('Failed to mark movie as seen');
+    }
+  }
+
+  async function markClear(imdbID) {
+    const response = await fetch(`/markClear?imdbID=${imdbID}`, {
+      method: 'POST'
+    });
+    if (response.ok) {
+      document.getElementById(imdbID).className = 'movie';
+    } else {
+      alert('Failed to clear movie status');
+    }
+  }
+
+  async function markWantToSee(imdbID) {
+    const response = await fetch(`/markWantToSee?imdbID=${imdbID}`, {
+      method: 'POST'
+    });
+    if (response.ok) {
+      document.getElementById(imdbID).classList.add('want-to-see');
+    } else {
+      alert('Failed to mark movie as want to see');
+    }
+  }
+
+  async function markDontWantToSee(imdbID) {
+    const response = await fetch(`/markDontWantToSee?imdbID=${imdbID}`, {
+      method: 'POST'
+    });
+    if (response.ok) {
+      document.getElementById(imdbID).style.display = 'none';
+    } else {
+      alert('Failed to mark movie as dont want to see');
+    }
+  }
+</script>
+<body>
+
+<h1><a href="/">
+        Falazar's MovieDB</a></h1>
+
+<form method="GET" action="/">
+    <label for="minRating">Min Rating:</label>
+    <input type="number" id="minRating" name="minRating" value="<%= minRating %>" min="0" max="10">
+    Genre: <input name="genre" value="<%= genre %>">
+    Title: <input name="title" value="<%= title %>">
+    Box Office Hits: <input type="checkbox" name="boxOfficeHits" <%= boxOfficeHits ? 'checked' : '' %>>
+    <button type="submit">Filter</button>
+    <a href="/?watchList=1">Watchlist</a>
+</form>
+
+<div class="movies">
+    <% movies.forEach(movie => { %>
+        <% let movieClass = movie.rating >= 7 ? 'high-rating' : ''; %>
+        <% if (movie.seenStatus === 'w') movieClass = 'want-to-see'; %>
+        <div class="movie <%= movieClass %>" id="<%= movie.imdbID %>">
+            <a href="<%= movie.yesUrl %>" target="_blank">
+                <img src="<%= movie.poster %>" alt="<%= movie.title %>">
+            </a>
+
+            <div class="movie-icons">
+                <a href="https://www.imdb.com/title/<%= movie.imdbID %>/" target="_blank">
+                    <%= movie.rating %></a>
+
+                <% if (movie.seenStatus) { %>
+                    Status: <%= movie.seenStatus %>
+                    <a href="#" onclick="markClear('<%= movie.imdbID %>'); return false;">
+                        C</a>
+                <% } else { %>
+                    <a href="#" onclick="markWantToSee('<%= movie.imdbID %>'); return false;">
+                        <span style="color: red;">&#10084;</span></a>
+                    <a href="#" onclick="markDontWantToSee('<%= movie.imdbID %>'); return false;">
+                        <span style="color: orange;">&#128577;</span></a>
+                    <a href="#" onclick="markSeen('<%= movie.imdbID %>'); return false;">
+                        <span style="color: green;">&#128065;</span></a>
+                <% } %>
+            </div>
+        </div>
+    <% }) %>
+</div>
+</body>
+</html>
