@@ -13,7 +13,11 @@ let counters = {
   updatedCount: 0
 };
 
-// Read a webpage and return.
+/**
+ * Reads a webpage and returns its content.
+ * @param {string} url - The URL of the webpage to read.
+ * @returns {Promise<string>} - The content of the webpage.
+ */
 async function readWebpage(url: string): Promise<string> {
 // Make sure Chrome is started in debug mode to use this script.
 // From Console, run this:
@@ -33,7 +37,11 @@ async function readWebpage(url: string): Promise<string> {
   return content;
 }
 
-// Parse movies from the HTML content.
+/**
+ * Parses movies from the HTML content.
+ * @param {string} html - The HTML content to parse.
+ * @returns {Promise<{title: string, href: string, imgSrc: string}[]>} - A list of movies with their title, href, and imgSrc.
+ */
 async function parseMovies(html: string): Promise<{ title: string, href: string, imgSrc: string }[]> {
   const $ = cheerio.load(html);
   const movies: { title: string, href: string, imgSrc: string }[] = [];
@@ -53,8 +61,12 @@ async function parseMovies(html: string): Promise<{ title: string, href: string,
   return movies;
 }
 
+/**
+ * Checks the movies and updates their information.
+ * @param {{title: string, href: string, imgSrc: string}[]} movies - The list of movies to check.
+ * @returns {Promise<void>}
+ */
 async function checkMovies(movies: { title: string, href: string, imgSrc: string }[]): Promise<void> {
-  let newMovieCnt = 0;
 
   for (const movie of movies) {
     const index = movies.indexOf(movie);
@@ -70,16 +82,21 @@ async function checkMovies(movies: { title: string, href: string, imgSrc: string
     await lookupMovie(movie.title, 2024, movie.href, false, counters);
   }
 
-  console.log(`\nFinal new movie count = ${newMovieCnt}.`);
-
   console.log('New movies:', counters.newCount);
   console.log('Errors:', counters.errorCount);
   console.log('Skipped:', counters.skippedCount);
   console.log('Updated:', counters.updatedCount);
 }
 
-
-// todo break up method some.
+/**
+ * Looks up a movie and updates the database with its information.
+ * @param {string} name - The name of the movie.
+ * @param {number} year - The year of the movie.
+ * @param {string} yesUrl - The URL of the movie on YesMovies.
+ * @param {boolean} [forceRecheck=false] - Whether to force recheck the movie.
+ * @param {{newCount: number, errorCount: number, skippedCount: number, updatedCount: number}} counters - The counters for tracking the number of new, error, skipped, and updated movies.
+ * @returns {Promise<void>}
+ */
 async function lookupMovie(name: string, year: number, yesUrl: string, forceRecheck: boolean = false, counters: {
   newCount: number,
   errorCount: number,
@@ -95,7 +112,7 @@ async function lookupMovie(name: string, year: number, yesUrl: string, forceRech
 
   // STEP 1: Get days since updatedOn, skip if recently done.
   const daysSinceResponse = await db.get('SELECT julianday("now") - julianday(updatedOn) as daysSince FROM movies WHERE title = ? ', [name]);
-  const daysSince = daysSinceResponse ? daysSinceResponse.daysSince : null;
+  const daysSince = daysSinceResponse ? Math.round(daysSinceResponse.daysSince) : null;
   console.log("  daysSince = ", daysSince);
   db.close();
   if (!forceRecheck && daysSince && daysSince < 3) {
@@ -106,7 +123,6 @@ async function lookupMovie(name: string, year: number, yesUrl: string, forceRech
 
   try {
     // STEP 2: Get YesMovies page to get the movie year correctly.
-    // TODO MAKE METHOD.
     const yesMoviesData = await parseYesMoviesData(yesUrl);
     if (!yesMoviesData) {
       console.log(`  Skipping ${name} (${year}) as no YesMovies data found.`);
@@ -115,7 +131,6 @@ async function lookupMovie(name: string, year: number, yesUrl: string, forceRech
     }
 
     // STEP 2: Get all info from OMDB API first.
-    // const { releaseDate, genre, imdbID, plot, poster, boxOffice, runtime } = await parseOMDBData(name, year);
     const omdbData = await parseOMDBData(name, year);
     if (!omdbData) {
       console.log(`  Skipping ${name} (${year}) as no OMDB data found.`);
@@ -154,7 +169,6 @@ async function lookupMovie(name: string, year: number, yesUrl: string, forceRech
       console.log(`  Adding to new movie count = ${counters.newCount}.`);
     } else {
       counters.updatedCount++;
-      console.log(`  Adding to updated movie count = ${counters.updatedCount}.`);
     }
 
   } catch (error) {
@@ -165,6 +179,11 @@ async function lookupMovie(name: string, year: number, yesUrl: string, forceRech
   }
 }
 
+/**
+ * Parses the YesMovies data to get the movie year.
+ * @param {string} yesUrl - The URL of the movie on YesMovies.
+ * @returns {Promise<{year: number}>} - The year of the movie.
+ */
 async function parseYesMoviesData(yesUrl: string) {
   const yesResponse = await readWebpage(yesUrl);
   // console.log("  DEBUG: yesResponse = ", yesResponse);
@@ -174,13 +193,20 @@ async function parseYesMoviesData(yesUrl: string) {
   if (yearMatchTXT) {
     // console.log("  DEBUG: yearMatchTXT[1] = ", yearMatchTXT[1]);
     year = yearMatchTXT ? parseInt(yearMatchTXT[1]) : new Date().getFullYear();
-    console.log("  DEBUG: year found = ", year);
+    // console.log("  DEBUG: year found = ", year);
+  } else {
+    console.log("  ERROR: No year found for this movie.");
   }
 
   return { year };
 }
 
-// Given a movie name and year grab the OMDB data for it.
+/**
+ * Given a movie name and year, grabs the OMDB data for it.
+ * @param {string} name - The name of the movie.
+ * @param {number} year - The year of the movie.
+ * @returns {Promise<{releaseDate: Date, genre: string, imdbID: string, plot: string, poster: string, boxOffice: number, runtime: number}>} - The OMDB data of the movie.
+ */
 async function parseOMDBData(name: string, year: number) {
   const apiKey = 'e5a66dda';
   const url = `http://www.omdbapi.com/?t=${encodeURIComponent(name)}&y=${year}&apikey=${apiKey}`;
@@ -200,7 +226,7 @@ async function parseOMDBData(name: string, year: number) {
     }
   }
 
-  console.log(`  Found movie ${name} (${year}) data...:`);
+  // console.log(`  Found movie ${name} (${year}) data...:`);
 
   // Grab out values from OMB.
   const releaseDate = new Date(ombResponse.data.Released);
@@ -224,7 +250,7 @@ async function parseOMDBData(name: string, year: number) {
   }
 
   // console.log("DEBUG data = ", ombResponse.data);
-  console.log(`  OMDB Data: releaseDate: ${releaseDate}, genre: ${genre}, imdbID: ${imdbID}, boxOffice: ${boxOffice}, runtime: ${runtime}`);
+  console.log(`  OMDB Data: genre: ${genre}, imdbID: ${imdbID}, boxOffice: ${boxOffice}, runtime: ${runtime}`);
 
   if (!imdbID) {
     console.log(`  Found movie ${name} (${year}):`, ombResponse.data);
@@ -234,27 +260,41 @@ async function parseOMDBData(name: string, year: number) {
   return { releaseDate, genre, imdbID, plot, poster, boxOffice, runtime };
 }
 
-
+/**
+ * Parses the IMDB data to get the movie rating.
+ * @param {string} name - The name of the movie.
+ * @param {number} year - The year of the movie.
+ * @param {string} imdbID - The IMDB ID of the movie.
+ * @returns {Promise<{rating: string}>} - The rating of the movie.
+ */
 async function parseIMDBData(name: string, year: number, imdbID: string) {
   const imdbUrl = `https://www.imdb.com/title/${imdbID}/`;
-  console.log(`  Loading IMDB URL: ${imdbUrl}`);
+  // console.log(`  Loading IMDB URL: ${imdbUrl}`);
   const imdbContent = await readWebpage(imdbUrl);
 
   // ex: aggregateRating":{"@type":"AggregateRating","ratingCount":83,"bestRating":10,"worstRating":1,"ratingValue":4.6
   // Parse the ratingValue and ratingCount above.
   const ratingsMatch = imdbContent.match(/ratingCount":(\d+),.*?ratingValue":([\d.]+)/);
-  let rating = ratingsMatch ? ratingsMatch[2] : '';
+  let rating = ratingsMatch ? ratingsMatch[2] : '0';
   const ratingVotes = ratingsMatch ? parseInt(ratingsMatch[1]) : 0;
   console.log(`  IMDB Rating: ${rating} from ${ratingVotes} votes`);
+  if (rating === '0') {
+    console.log(`  Loading IMDB URL: ${imdbUrl}`);
+    console.log(`  ERROR: No rating found for ${name} (${year})`);
+  }
   if (ratingVotes < 1000) {
     rating = '0';
-    console.log(`  Skipping ${name} (${year}) rating as it has less than 1k votes.`);
+    console.log(`  Changing ${name} (${year}) rating as it has less than 1k votes.`);
   }
 
   return { rating };
 }
 
-
+/**
+ * Saves the movie information to the database.
+ * @param {{title: string, imdbID: string, releaseDate: Date, genre: string, rating: string, plot: string, poster: string, yesUrl: string, boxOffice: number, runtime: number}} movie - The movie information to save.
+ * @returns {Promise<number>} - 1 if the movie is new, 0 if the movie is updated.
+ */
 async function saveToDB(movie: {
   title: string,
   imdbID: string,
@@ -267,91 +307,105 @@ async function saveToDB(movie: {
   boxOffice: number,
   runtime: number
 }): Promise<number> {
-  const db = await open({
-    filename: './src/movies.db',
-    driver: sqlite3.Database
-  });
+  try {
+    const db = await open({
+      filename: './src/movies.db',
+      driver: sqlite3.Database
+    });
 
-  await db.exec(` CREATE TABLE IF NOT EXISTS movies
-                  (
-                      id
-                      INTEGER
-                      PRIMARY
-                      KEY
-                      AUTOINCREMENT,
-                      title
-                      TEXT,
-                      imdbID
-                      TEXT
-                      UNIQUE,
-                      releaseDate
-                      TEXT,
-                      genre
-                      TEXT,
-                      rating
-                      TEXT,
-                      plot
-                      TEXT,
-                      poster
-                      TEXT,
-                      yesUrl
-                      TEXT,
-                      seenStatus
-                      TEXT
-                      DEFAULT
-                      '',
-                      boxOffice
-                      INTEGER
-                      DEFAULT
-                      0,
-                      runtime
-                      INTEGER
-                      DEFAULT
-                      0,
-                      addedOn
-                      TEXT
-                      DEFAULT
-                      CURRENT_DATE,
-                      updatedOn
-                      TEXT
-                      DEFAULT
-                      CURRENT_DATE
-                  ) `);
+    await db.exec(` CREATE TABLE IF NOT EXISTS movies
+                    (
+                        id
+                        INTEGER
+                        PRIMARY
+                        KEY
+                        AUTOINCREMENT,
+                        title
+                        TEXT,
+                        imdbID
+                        TEXT
+                        UNIQUE,
+                        releaseDate
+                        TEXT,
+                        genre
+                        TEXT,
+                        rating
+                        TEXT,
+                        plot
+                        TEXT,
+                        poster
+                        TEXT,
+                        yesUrl
+                        TEXT,
+                        seenStatus
+                        TEXT
+                        DEFAULT
+                        '',
+                        boxOffice
+                        INTEGER
+                        DEFAULT
+                        0,
+                        runtime
+                        INTEGER
+                        DEFAULT
+                        0,
+                        addedOn
+                        TEXT
+                        DEFAULT
+                        CURRENT_DATE,
+                        updatedOn
+                        TEXT
+                        DEFAULT
+                        CURRENT_DATE
+                    ) `);
 
-  const existingMovie = await db.get('SELECT * FROM movies WHERE title = ? AND imdbID = ?', [movie.title, movie.imdbID]);
+    const existingMovie = await db.get('SELECT * FROM movies WHERE title = ? AND imdbID = ?', [movie.title, movie.imdbID]);
 
-  movie.genre = movie.genre.toLowerCase();
+    movie.genre = movie.genre.toLowerCase();
 
-  if (existingMovie) {
-    await db.run(`
-        UPDATE movies
-        SET releaseDate = ?,
-            genre       = ?,
-            rating      = ?,
-            plot        = ?,
-            poster      = ?,
-            yesUrl      = ?,
-            boxOffice   = ?,
-            runtime     = ?,
-            addedOn     = CURRENT_DATE,
-            updatedOn   = CURRENT_DATE
-        WHERE title = ?
-          AND imdbID = ?
-    `, [movie.releaseDate.toISOString(), ` ${movie.genre} `, movie.rating, movie.plot, movie.poster, movie.yesUrl, movie.boxOffice, movie.runtime,
-      movie.title, movie.imdbID]);
-    console.log(`  Updated movie: ${movie.title} (${movie.imdbID})`);
-    return 0;
-  } else {
-    await db.run(`
-        INSERT INTO movies (title, imdbID, releaseDate, genre, rating, plot, poster, yesUrl, boxOffice, runtime,
-                            addedOn, updatedOn)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_DATE, CURRENT_DATE)
-    `, [movie.title, movie.imdbID, movie.releaseDate.toISOString(), ` ${movie.genre} `, movie.rating, movie.plot, movie.poster, movie.yesUrl, movie.boxOffice, movie.runtime]);
-    console.log(`  Inserted new movie: ${movie.title} (${movie.imdbID})`);
-    return 1;
+    if (existingMovie) {
+      await db.run(`
+          UPDATE movies
+          SET releaseDate = ?,
+              genre       = ?,
+              rating      = ?,
+              plot        = ?,
+              poster      = ?,
+              yesUrl      = ?,
+              boxOffice   = ?,
+              runtime     = ?,
+              addedOn     = CURRENT_DATE,
+              updatedOn   = CURRENT_DATE
+          WHERE title = ?
+            AND imdbID = ?
+      `, [movie.releaseDate.toISOString(), ` ${movie.genre} `, movie.rating, movie.plot, movie.poster, movie.yesUrl, movie.boxOffice, movie.runtime,
+        movie.title, movie.imdbID]);
+      console.log(`  Updated movie: ${movie.title} (${movie.imdbID})`);
+      return 0;
+    } else {
+      const query = 'INSERT INTO movies (title, imdbID, releaseDate, genre, rating, plot, poster, yesUrl, boxOffice, runtime, addedOn, updatedOn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_DATE, CURRENT_DATE)';
+      const formattedQuery = formatQuery(query, [movie.title, movie.imdbID, movie.releaseDate.toISOString(), ` ${movie.genre} `, movie.rating, movie.plot, movie.poster, movie.yesUrl, movie.boxOffice, movie.runtime]);
+      console.log("DEBUG: formatted query = " + formattedQuery);
+
+      await db.run(query,
+        [movie.title, movie.imdbID, movie.releaseDate.toISOString(), ` ${movie.genre} `, movie.rating, movie.plot, movie.poster, movie.yesUrl, movie.boxOffice, movie.runtime]);
+      console.log(`  Inserted new movie: ${movie.title} (${movie.imdbID})`);
+      return 1;
+    }
+    await db.close();
+
+  } catch (error) {
+    console.error('Error saving movie to database:', error);
+    // rethrow error.
+    throw error;
   }
-  await db.close();
+}
 
+function formatQuery(query: string, params: any[]): string {
+  return query.replace(/\?/g, () => {
+    const param = params.shift();
+    return typeof param === 'string' ? `'${param}'` : param;
+  });
 }
 
 async function main() {

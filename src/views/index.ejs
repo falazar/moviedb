@@ -77,20 +77,22 @@
             </a>
 
             <div class="movie-icons">
-                <a href="https://www.imdb.com/title/<%= movie.imdbID %>/" target="_blank">
+                <a href="https://www.imdb.com/title/<%= movie.imdbID %>/" target="_blank" title="IMDB">
                     <%= movie.rating %></a>
 
                 <% if (movie.seenStatus) { %>
                     Status: <%= movie.seenStatus %>
-                    <a href="#" onclick="markClear('<%= movie.imdbID %>'); return false;">
+                    <a href="#" onclick="markClear('<%= movie.imdbID %>'); return false;" title="Clear Status">
                         C</a>
-                <% } else { %>
-                    <a href="#" onclick="markWantToSee('<%= movie.imdbID %>'); return false;">
-                        <span style="color: red;">&#10084;</span></a>
-                    <a href="#" onclick="markDontWantToSee('<%= movie.imdbID %>'); return false;">
-                        <span style="color: orange;">&#128577;</span></a>
-                    <a href="#" onclick="markSeen('<%= movie.imdbID %>'); return false;">
+                    <a href="#" onclick="markSeen('<%= movie.imdbID %>'); return false;" title="Seen">
                         <span style="color: green;">&#128065;</span></a>
+                <% } else { %>
+                    <a href="#" onclick="markWantToSee('<%= movie.imdbID %>'); return false;" title="Add to Watchlist">
+                        <span style="color: red;">&#10084;</span></a>
+                    <a href="#" onclick="markSeen('<%= movie.imdbID %>'); return false;" title="Seen">
+                        <span style="color: green;">&#128065;</span></a>
+                    <a href="#" onclick="markDontWantToSee('<%= movie.imdbID %>'); return false;" title="Don't Want">
+                        <span style="color: orange;">&#128577;</span></a>
                 <% } %>
             </div>
         </div>

@@ -51,10 +51,10 @@ app.get('/', async (req, res) => {
     params.push(`%${title}%`);
   } else {
     query += ' AND seenStatus != "s"  AND seenStatus != "d" ';
+    // Leave off all short films.
+    // query += ' AND (runtime >= 60 ';
+    query += ' AND (runtime >= 60 or runtime = 0) '; // 0 for unknown.
   }
-  // Leave off all short films.
-  // query += ' AND (runtime >= 60 ';
-  query += ' AND (runtime >= 60 or runtime = 0) ';
   // Add ordering, we want to see highest rated new movies by release date YEAR first.
   query += ' ORDER BY strftime(\'%Y\', releaseDate) DESC, rating DESC';
   query += ' limit 200 ';
