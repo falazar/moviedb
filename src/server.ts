@@ -17,7 +17,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 let db: Database<sqlite3.Database, sqlite3.Statement>;
 
 
-
 // Route to display movies
 app.get('/', async (req, res) => {
   const genre = req.query.genre || '';
@@ -31,8 +30,7 @@ app.get('/', async (req, res) => {
   const params = [];
   if (watchList) {
     query += ' AND seenStatus = "w" ';
-  }
-  else if (minRating >= 6) {
+  } else if (minRating >= 6) {
     query += ' AND rating >= ?';
     params.push(minRating);
   } else if (minRating) {
@@ -104,7 +102,7 @@ app.post('/markDontWantToSee', async (req, res) => {
 });
 
 // Start the server.
-app.listen(PORT, async() => {
+app.listen(PORT, async () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 
   db = await open({
